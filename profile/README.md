@@ -92,6 +92,25 @@ The framework provides:
 
 Build commands with parameters, flags, and options according to tool specifications. Include value checking and transformations.
 
+Example implementation:
+```python
+cmd = ["-log", str(self.params["data_file_path"]), "-formula", str(self.params["formula_file_path"])]
+
+if "param_1" in self.params:
+    cmd += ["--param-1", str(self.params["param_1"])]
+
+if "param_n" in self.params:
+    val = self.params["param_n"]
+    if val > 0 and val < 10:
+        # Add parameter logic
+        pass
+    else:
+        # Handle invalid parameter
+        pass
+
+return self.image.run(self.params["path_to_folder"], cmd, time_out)
+```
+
 Return the command execution result using `self.image.run()`.
 
 ### Post-processing Method
