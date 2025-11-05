@@ -1,115 +1,145 @@
-### Test
-How to integrate:
-a public Tool into the framework:
+MonitoringFace Framework Integration Guide
 
-Create a Pull Request for the github repository (https://github.com/MonitoringFace-Benchmark/MonitoringFace/tree/main).
+This guide explains how to integrate monitoring tools into the MonitoringFace framework.
+Table of Contents
 
-1. Provide a docker file that:
-1.1 Uses the appropriate base image (supporting the correct version of the tech stack etc).
-1.2 Imports all needed build tools (git, cargo, gcc, opam etc.)
-1.3 Clones the repository, the git clone command should use a "ARG GIT_BRANCH" variable that allows the
-framework to download and run different branches and releases.
-1.4 Build the tool and move into the final image
-1.5 CMD should provide an entrypoint with the lower case name of the tool
+    Public Tool Integration
 
-2. Provide a properties file
-(the format is yet to be decided or finalized) but for now provide the four fields:
-name= ... (name of the tool)
-git= ... (the version control that the repository is hosted on)
-owner= ... (the name of the user or organisation owning the repo)
-repo= ... (name of the repo)
+    Private Tool Integration
 
-3. Other software:
-(This refers to the implementation of the Python handler below. The implementation requires conversion between different
-data formats, ideally the implementation is provided in python, but if the software is complex or applicable tools exists
-they can be used.)
-The software must be also packed into docker files and the usage is then handled by the implemented functions.
+    AbstractMonitorTemplate Implementation
 
+    Case Study Examples
 
+Public Tool Integration
 
-a private Tool into the framework:
-follow the steps above on how to create the docker and properties file but instead of creating a pull request extend the
-folder structure as follows: {your_path_to}/MonitoringFaceBootloader/build/Monitor/{your_tool_name}/{branch_or_release},
-place the docker and properties files in this folder.
+To integrate a public tool, create a Pull Request for the MonitoringFace GitHub repository.
+Dockerfile Requirements
 
+Your Dockerfile must meet these specifications:
 
+1.1 Base Image
 
+    Use an appropriate base image supporting the correct version of the tech stack
 
+1.2 Build Tools
 
-To also support the usage of proprietary tools or tools that shall remain private (temporarily or permanently), by using
-a special instance of the ImageManager (LocalImageManager, as opposed to the RemoteImageManager), to run and use the tools
-it however remains necessary to follow all steps, such as providing the standardised docker container and implementation of
-the AbstractMonitorTemplate.
+    Import all needed build tools (git, cargo, gcc, opam, etc.)
 
+1.3 Repository Clone
 
+    Clone the repository using a ARG GIT_BRANCH variable to support different branches and releases
 
+    Example: git clone -b ${GIT_BRANCH} https://github.com/owner/repo.git
 
+1.4 Build Process
 
-Implementing an instance of AbstractMonitorTemplate:
+    Build the tool and move into the final image
 
-The Abstract Class defines the shared functional interface and parameters that are required by the framework, this
-includes an instance of the ImageManager Class allowing the framework automation to access and run the tool, the second
-parameter is a dictionary of type AnyStr to Any, that allows the definition of Monitor specific data such as parameters,
-paths to additional software and data.
+1.5 Entrypoint
 
+    CMD should provide an entrypoint with the lowercase name of the tool
 
-def __init__:
-implement the call to the super constructor (super().__init__(image, params)). The additional data must
-be contained within the params dictionary, new class variables can be defined through accessing the ImageManager and
-Parameters dictionary.
+Properties File
 
-In principal it is also possible to create data by calling arbitrary scripts and software, however it is preferred to
-keep the implementation as minimal and self-contained as possible. The additional software should be build inside the
-init to prevent repeated overhead during the execution.
+Create a properties file with these fields (format may evolve):
+properties
 
+name=ToolName
+git=github.com
+owner=owner_name
+repo=repository_name
 
-def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
-the framework automation will create the data, signature and formula according to the specified generators or case
-studies, hence each tool needs to provide a translations between provided formats and the required formats.
-The standard format is csv with the following pattern "[Predicate Name], tp=[time point], ts=[time stamp], [variables]"
-the variables can be empty or of finite length.
+Additional Software
 
-The framework will provide the path to the data and the name of each respective file. The framework will also provide a
-"scratch" folder that will function as the private file system for each tool to store the parsed files and store the
-output file generated by the container if applicable.
+For data format conversion and implementation:
 
+    Prefer Python implementations when possible
 
-def run_offline(self, time_out: int) -> (AnyStr, int):
-describe how a command with parameters, flag and options is build correctly according to the tools specification,
-including checking values and transformations.
-"""
+    Complex tools can be packaged in Docker containers
+
+    Usage is handled through implemented functions
+
+Private Tool Integration
+
+For proprietary or private tools:
+
+    Follow all the same steps for creating Docker and properties files
+
+    Instead of creating a PR, extend the folder structure:
+    {your_path_to}/MonitoringFaceBootloader/build/Monitor/{your_tool_name}/{branch_or_release}
+
+    Place the Docker and properties files in this folder
+
+Use the LocalImageManager (instead of RemoteImageManager) to run private tools. All requirements remain the same, including standardized docker containers and AbstractMonitorTemplate implementation.
+AbstractMonitorTemplate Implementation
+Constructor
+
+Implement the call to the super constructor: super().__init__(image, params). Additional data must be contained within the params dictionary. Define new class variables by accessing the ImageManager and Parameters dictionary.
+
+Keep implementations minimal and self-contained. Initialize additional software in the constructor to prevent repeated execution overhead.
+Pre-processing Method
+
+The framework provides data, signature, and formula files according to specified generators. Each tool must translate between framework formats and tool-specific formats.
+
+Standard Input Format:
+
+    CSV format: [Predicate Name], tp=[time point], ts=[time stamp], [variables]
+
+    Variables can be empty or of finite length
+
+The framework provides:
+
+    Path to data and respective file names
+
+    "Scratch" folder for private file storage
+
+    Space for parsed files and container output
+
+Run Offline Method
+
+Build commands with parameters, flags, and options according to tool specifications. Include value checking and transformations.
+
+Example command construction:
+python
+
 cmd = ["-log", str(self.params["data_file_path"]), "-formula", str(self.params["formula_file_path"])]
 
+# Add optional parameters with validation
 if "param_1" in self.params:
     cmd += ["--param-1", str(self.params["param_1"])]
-...
 
+# Parameter validation
 if "param_n" in self.params:
     val = self.params["param_n"]
     if val > 0 and val < 10:
-        ...
-    else:
-        ...
+        # Add parameter
+        pass
 
-return self.image.run(self.params["path_to_folder"], cmd, time_out)
-"""
-The resulting command (list of strings) is used to instruct the tools
-docker container through the ImageManger.run, returning the either the stdout and return code 0 or stderr and the
-respective return code.
+Return the command execution result using self.image.run().
+Post-processing Method
 
+Called only when run_offline returns successfully (return code 0). Parse tool output into VeriMon-compatible oracle format.
 
-def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
-the function is called after run_offline returned 0 in other words only called when the tool container was executed
-successfully. Depending on the tools implementation the output of the tools is either printed on standard output and
-passed as a parameter or in a result file written by the docker container. This function is responsible to parse the
-resulting output into the format of the oracle (currently: VeriMon).
+Handle both output methods:
 
-It is important to handle the case that the tool does not produce output and hence standard output is empty and a result
-file doesn't exists to prevent file not found errors.
+    Standard output passed as parameter
 
-=============================================================================================================================
+    Result files written by docker container
 
-Case study detail TimelyMon and MonPoly's implementation
+Important: Handle cases where tools produce no output (empty stdout, missing result files) to prevent errors.
+Case Study Examples
 
+Refer to TimelyMon and MonPoly implementations for detailed examples of:
 
-3. Create an experiment and let the automation of the framework handle the rest!
+    Format conversion between tools
+
+    Parameter handling and validation
+
+    Output parsing and normalization
+
+    Error handling and timeout management
+
+Final Step
+
+Create an experiment and let the framework automation handle the rest!
