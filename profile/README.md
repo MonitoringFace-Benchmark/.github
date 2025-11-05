@@ -65,11 +65,15 @@ Use the `LocalImageManager` (instead of `RemoteImageManager`) to run private too
 
 ### Constructor
 
+`def __init__(self, image, params):`
+
 Implement the call to the super constructor: `super().__init__(image, params)`. Additional data must be contained within the params dictionary. Define new class variables by accessing the ImageManager and Parameters dictionary.
 
 Keep implementations minimal and self-contained. Initialize additional software in the constructor to prevent repeated execution overhead.
 
 ### Pre-processing Method
+
+`def pre_processing(self, path_to_folder: str, data_file: str, signature_file: str, formula_file: str):`
 
 The framework provides data, signature, and formula files according to specified generators. Each tool must translate between framework formats and tool-specific formats.
 
@@ -84,11 +88,15 @@ The framework provides:
 
 ### Run Offline Method
 
+`def run_offline(self, time_out: int) -> tuple[str, int]:`
+
 Build commands with parameters, flags, and options according to tool specifications. Include value checking and transformations.
 
 Return the command execution result using `self.image.run()`.
 
 ### Post-processing Method
+
+`def post_processing(self, stdout_input: str) -> list[str]:`
 
 Called only when `run_offline` returns successfully (return code 0). Parse tool output into VeriMon-compatible oracle format.
 
